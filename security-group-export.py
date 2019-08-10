@@ -41,74 +41,83 @@ def style(ws, value, row, column, color):
     ws.column_dimensions['C'].width = 20
     ws.column_dimensions['D'].width = 20
 
-# Main flow
-client = login(awsAccID, prefix)
-securityGroups = client.describe_security_groups()
+def sg_export(awsAccID, prefix, vpcId, fileName):
+    client = login(awsAccID, prefix)
+    securityGroups = client.describe_security_groups()
 
-wb = Workbook()
-ws = wb.active
-i = 0
+    try:
+        wb = load_workbook(filename=fileName)
+        ws = wb.create_sheet(title="Ec2 List")
+    except:
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Ec2 List"
 
-for sg in securityGroups['SecurityGroups']:
-    if sg['VpcId'] == vpcId: 
-        style(ws, 'GroupName', i + 2, 2, "000000FF")
-        ws.cell(row=2+i, column=3).value = sg['GroupName']
-        style(ws, 'Description', 3 + i, 2, "000000FF")
-        ws.cell(row=3+i, column=3).value = sg['Description']
-        try:
-            style(ws, 'Name', 4 + i, 2, "000000FF")
-            for tag in sg['Tags']:
-                if tag['Key'] == 'Name':
-                    ws.cell(row=4+i, column=3).value = tag['Value']
-        except:
-            style(ws, 'Name', 4 + i, 2, "000000FF")
-            pass
-        style(ws, 'Inbound Rules:', 5 + i, 2, "E59000")
-        style(ws, 'Protocol', 6 + i, 2, "E59000")
-        style(ws, 'Port Range', 6 + i, 3, "E59000")
-        style(ws, 'Source', 6 + i, 4, "E59000")
+    i = 0
 
-        k = i
-        for ruleIn in sg['IpPermissions']:
-            ws.cell(row=7 + k, column=2).value = ruleIn['IpProtocol']
-            if ruleIn['IpProtocol'] == "-1":
-                ws.cell(row=7 + k, column=3).value = ruleIn['IpProtocol']
-            else:
-                if ruleIn['FromPort'] == ruleIn['ToPort']:
-                    ws.cell(row=7 + k, column=3).value = ruleIn['FromPort']
+    for sg in securityGroups['SecurityGroups']:
+        if sg['VpcId'] == vpcId:
+            style(ws, 'GroupName', i + 2, 2, "000000FF")
+            ws.cell(row=2+i, column=3).value = sg['GroupName']
+            style(ws, 'Description', 3 + i, 2, "000000FF")
+            ws.cell(row=3+i, column=3).value = sg['Description']
+            try:
+                style(ws, 'Name', 4 + i, 2, "000000FF")
+                for tag in sg['Tags']:
+                    if tag['Key'] == 'Name':
+                        ws.cell(row=4+i, column=3).value = tag['Value']
+            except:
+                style(ws, 'Name', 4 + i, 2, "000000FF")
+                pass
+            style(ws, 'Inbound Rules:', 5 + i, 2, "E59000")
+            style(ws, 'Protocol', 6 + i, 2, "E59000")
+            style(ws, 'Port Range', 6 + i, 3, "E59000")
+            style(ws, 'Source', 6 + i, 4, "E59000")
+
+            k = i
+            for ruleIn in sg['IpPermissions']:
+                ws.cell(row=7 + k, column=2).value = ruleIn['IpProtocol']
+                if ruleIn['IpProtocol'] == "-1":
+                    ws.cell(row=7 + k, column=3).value = ruleIn['IpProtocol']
                 else:
-                    ws.cell(row=7 + k, column=3).value = str(ruleIn['FromPort']) + "-" + str(ruleIn['ToPort'])
-            sourceList = ''
-            for ip in ruleIn['IpRanges']:
-                sourceList = sourceList + ' ' + ip['CidrIp']
-                ws.cell(row=7 + k, column=4).value = sourceList
-            for user in ruleIn['UserIdGroupPairs']:
-                sourceList = sourceList + ' ' + user['GroupId'] + '/' + user['UserId']
-                ws.cell(row=7 + k, column=4).value = sourceList
-            k = k + 1
+                    if ruleIn['FromPort'] == ruleIn['ToPort']:
+                        ws.cell(row=7 + k, column=3).value = ruleIn['FromPort']
+                    else:
+                        ws.cell(row=7 + k, column=3).value = str(ruleIn['FromPort']) + "-" + str(ruleIn['ToPort'])
+                sourceList = ''
+                for ip in ruleIn['IpRanges']:
+                    sourceList = sourceList + ' ' + ip['CidrIp']
+                    ws.cell(row=7 + k, column=4).value = sourceList
+                for user in ruleIn['UserIdGroupPairs']:
+                    sourceList = sourceList + ' ' + user['GroupId'] + '/' + user['UserId']
+                    ws.cell(row=7 + k, column=4).value = sourceList
+                k = k + 1
 
-        style(ws, 'Outbound Rules:', 8 + k, 2, "E59000")
-        style(ws, 'Protocol', 9 + k, 2, "E59000")
-        style(ws, 'Port Range', 9 + k, 3, "E59000")
-        style(ws, 'Source', 9 + k, 4, "E59000")
-        for ruleOut in sg['IpPermissionsEgress']:
-            ws.cell(row=10 + k, column=2).value = ruleOut['IpProtocol']
-            if ruleOut['IpProtocol'] == "-1":
-                ws.cell(row=10 + k, column=3).value = ruleOut['IpProtocol']
-            else:
-                if ruleOut['FromPort'] == ruleOut['ToPort']:
-                    ws.cell(row=10 + k, column=3).value = ruleOut['FromPort']
+            style(ws, 'Outbound Rules:', 8 + k, 2, "E59000")
+            style(ws, 'Protocol', 9 + k, 2, "E59000")
+            style(ws, 'Port Range', 9 + k, 3, "E59000")
+            style(ws, 'Source', 9 + k, 4, "E59000")
+            for ruleOut in sg['IpPermissionsEgress']:
+                ws.cell(row=10 + k, column=2).value = ruleOut['IpProtocol']
+                if ruleOut['IpProtocol'] == "-1":
+                    ws.cell(row=10 + k, column=3).value = ruleOut['IpProtocol']
                 else:
-                    ws.cell(row=10 + k, column=3).value = str(ruleOut['FromPort']) + "-" + str(ruleOut['ToPort'])
-            sourceList = ''
-            for ip in ruleOut['IpRanges']:
-                sourceList = sourceList + ' ' + ip['CidrIp']
-                ws.cell(row=10 + k, column=4).value = sourceList
-            for user in ruleOut['UserIdGroupPairs']:
-                sourceList = sourceList + ' ' + user['GroupId'] + '/' + user['UserId']
-                ws.cell(row=10 + k, column=4).value = sourceList
-            k = k + 1
+                    if ruleOut['FromPort'] == ruleOut['ToPort']:
+                        ws.cell(row=10 + k, column=3).value = ruleOut['FromPort']
+                    else:
+                        ws.cell(row=10 + k, column=3).value = str(ruleOut['FromPort']) + "-" + str(ruleOut['ToPort'])
+                sourceList = ''
+                for ip in ruleOut['IpRanges']:
+                    sourceList = sourceList + ' ' + ip['CidrIp']
+                    ws.cell(row=10 + k, column=4).value = sourceList
+                for user in ruleOut['UserIdGroupPairs']:
+                    sourceList = sourceList + ' ' + user['GroupId'] + '/' + user['UserId']
+                    ws.cell(row=10 + k, column=4).value = sourceList
+                k = k + 1
 
-        i = k + 9
+            i = k + 9
 
-wb.save(fileName)
+    wb.save(fileName)
+
+# Main
+sg_export(awsAccID, prefix, vpcId, fileName)
